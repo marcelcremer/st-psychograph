@@ -80,6 +80,35 @@ This applies to every layer, not just initial scaffolding — resist adding a
 state-management library, a graph-viz library, etc. unless the task genuinely
 can't be done without one.
 
+## Code from other projects
+
+Never copy source from another project into this repository when its licence
+is copyleft (GPL, AGPL, LGPL, MPL) or carries an attribution requirement (MIT,
+BSD, Apache-2.0) — which in practice means every licence, and an unlicensed
+project most of all. Reimplement instead.
+
+What is worth taking from another project is what its code reveals about the
+*host system* — that `swipe.right()` only generates from the newest swipe,
+which DOM element a button has to be a sibling of, which field a backend
+actually reads. Those are facts about SillyTavern, not the other project's
+expression, and they are free to use. Its code is not: read it to learn what
+the constraint is, then write our own solution to that constraint, in this
+repo's own structure and naming.
+
+Two things follow:
+
+- Findings of that kind belong in
+  [`docs/sillytavern-ui-notes.md`](docs/sillytavern-ui-notes.md), written as
+  the finding itself, so nothing has to be re-derived and no reference
+  checkout has to be kept around.
+- Naming the project a finding came from, in that file or in a comment, is
+  worth doing and changes nothing about the above — crediting an observation
+  is not the same as copying an implementation.
+
+This is a rule about what enters the repo, not about what may be read. Cloning
+another extension and reading it to understand SillyTavern is fine and
+encouraged; it is how most of the UI notes were established.
+
 ## Code comments
 
 Default to no comments. Only add one when nothing else (types, tests, naming,
@@ -182,6 +211,7 @@ together on jQuery ready. Everything else lives under `src/`:
 |---|---|
 | `src/sillytavern.js` | Every import into SillyTavern's own source, and nowhere else. The depths differ per file and an extra `../` 404s silently at load time, so they are kept in one place. |
 | `src/constants.js` | Extension name/path and the `message`/`seed` extraction modes. |
+| `src/stscript.js` | Making a value safe to pass as a slash-command argument. Imports nothing, so both `src/injects.js` and `src/ui/` can use it without closing an import cycle. |
 | `src/settings.js` | Global `extension_settings` branch: defaults and `ensureSettings()`. |
 | `src/chat-state.js` | The per-chat `chat_metadata` branch: `ensureChatState()`, the layout migrations, and who the sheet is about. |
 | `src/messages.js` | What counts as a story/timeline message, and the per-message "already extracted" markers. |
@@ -196,7 +226,7 @@ together on jQuery ready. Everything else lives under `src/`:
 | `src/layers/motivation/` | `drivers.js` — the eight drivers, the five continuation rules, the standing goal block, and the inject they build. `lottery.js` — the per-turn draw, the lock, the chat's goal, and the roll recorded on each message. |
 | `src/layers/cognee.js` | The Cognee client: chat-scoped datasets, ingestion, backfill, recall. |
 | `src/injects.js` | Every `setExtensionPrompt` the memory layers make, and the generation hook that refreshes them. |
-| `src/ui/` | `settings-panel.js`, `sheet.js`, `guided.js`, `toolbar.js`, `message-buttons.js`, `housekeeping.js`. |
+| `src/ui/` | `settings-panel.js`, `sheet.js`, `guided.js` (the input-bar actions: guided message/swipe/continue and send-without-reply), `toolbar.js`, `message-buttons.js`, `housekeeping.js`. |
 | `src/events.js` | The SillyTavern event bindings. |
 
 Two conventions worth keeping:
