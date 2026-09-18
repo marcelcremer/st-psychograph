@@ -161,8 +161,11 @@ async function refreshMotivationInject() {
     }
 
     const goal = readMotivationGoal();
+    // Sanitized per line rather than whole: the value is one goal per line, and
+    // sanitizeStscriptValue() folds newlines into spaces.
+    const goals = goal.text.split("\n").map(sanitizeStscriptValue).filter(Boolean);
     const snapshot = [
-        goal.enabled ? buildGoalInject(sanitizeStscriptValue(goal.text)) : "",
+        goal.enabled ? buildGoalInject(goals) : "",
         buildMotivationInject(nextMotivationRoll()),
     ].filter(Boolean).join("\n\n");
     if (!snapshot) {

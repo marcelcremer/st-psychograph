@@ -96,12 +96,12 @@ function buildSheetMotivationPaneHtml() {
                 <div class="psychograph-sheet-pane-header">
                     <label class="checkbox_label" for="psychograph_motivation_goal_enabled">
                         <input id="psychograph_motivation_goal_enabled" type="checkbox" />
-                        Goal
+                        Goals
                     </label>
                 </div>
-                <small class="psychograph-sheet-hint">Injected ahead of the driver, where it carries less weight: a standing thread, not what this turn runs on.</small>
+                <small class="psychograph-sheet-hint">Injected ahead of the driver, where it carries less weight: standing threads, not what this turn runs on.</small>
                 <div class="psychograph-sheet-fields">
-                    <textarea id="psychograph_motivation_goal" class="text_pole textarea_compact" rows="3" placeholder="what they are quietly pursuing, in one sentence"></textarea>
+                    <textarea id="psychograph_motivation_goal" class="text_pole textarea_compact" rows="3" placeholder="long-term goals, one per line"></textarea>
                 </div>
             </div>
         </div>
