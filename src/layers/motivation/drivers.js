@@ -81,18 +81,19 @@ const MOTIVATION_INJECT_HEADING = "## How to play this turn";
 
 const DRIVER_CLOSER = "Play it. Don't narrate it, don't name it, and don't have {{char}} explain themselves.";
 
-// Deliberately ahead of the driver block in the same inject: the goal is a
-// standing thread, the driver is what this turn runs on, and the model weighs
+// Deliberately ahead of the driver block in the same inject: the goals are
+// standing threads, the driver is what this turn runs on, and the model weighs
 // the later instruction more heavily.
-export function buildGoalInject(goal) {
-    if (!goal) {
+export function buildGoalInject(goals) {
+    if (goals.length === 0) {
         return "";
     }
 
     return [
-        "## Current goal",
-        `{{char}} is quietly pursuing: ${goal}`,
-        "This is one thread among many — do not let it override {{char}}'s immediate reactions, other drivers, or the scene's actual demands. Its influence is subtle and unconscious.",
+        "## Long-term goals",
+        "The following long-term goals have subtle influence on the character's feelings, thoughts and intentions:",
+        ...goals.map((goal) => `- ${goal}`),
+        "They are standing threads among many — do not let them override immediate reactions, other drivers, or what the scene actually demands.",
     ].join("\n");
 }
 
