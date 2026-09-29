@@ -222,7 +222,7 @@ together on jQuery ready. Everything else lives under `src/`:
 | `src/prompts/` | Prompt text and response schemas only, one file per layer. Nothing here reads or writes state. |
 | `src/layers/state/` | `areas.js` — the 14 slots across 3 areas and their per-area config. `extraction.js` — the gate -> diff -> per-slot-update pipeline. |
 | `src/layers/timeline/` | `store.js` — the timeline blob and its work queue. `extraction.js` — per-message entries and the full rebuild. |
-| `src/layers/knowledge/` | `layers.js` — the three layer configurations (facts, dispositions, triggers). `store.js` — entry lists, dedup and merge. `extraction.js` — the model calls, card seeding and the rebuild. |
+| `src/layers/knowledge/` | `layers.js` — the three layer configurations (facts, dispositions, triggers). `store.js` — entry lists, dedup and merge. `names.js` — matching the names entries are grouped under, case-insensitively and to the full name. `extraction.js` — the model calls, card seeding and the rebuild. |
 | `src/layers/motivation/` | `drivers.js` — the eight drivers, the five continuation rules, the standing goal block, and the inject they build. `lottery.js` — the per-turn draw, the lock, the chat's goal, and the roll recorded on each message. |
 | `src/layers/cognee.js` | The Cognee client: chat-scoped datasets, ingestion, backfill, recall. |
 | `src/injects.js` | Every `setExtensionPrompt` the memory layers make, and the generation hook that refreshes them. |
