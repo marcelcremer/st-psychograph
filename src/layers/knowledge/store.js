@@ -6,7 +6,8 @@ import { rerankCandidates } from "../../llm/similarity.js";
 import { buildKnowledgeMergePrompt, buildKnowledgeSchema } from "../../prompts/knowledge.js";
 import { ensureSettings } from "../../settings.js";
 import { renderKnowledgeGroups } from "../../ui/sheet.js";
-import { KNOWLEDGE_MERGE_MAX_TOKENS } from "./layers.js";
+import { KNOWLEDGE_KEYS, KNOWLEDGE_LAYERS, KNOWLEDGE_MERGE_MAX_TOKENS } from "./layers.js";
+import { resolveKnowledgeOwner } from "./names.js";
 
 export function readKnowledgeEntries(layer) {
     return ensureChatState().knowledge[layer.id].entries;
@@ -76,10 +77,10 @@ function knowledgeSiblings(layer, candidate) {
         return entries.map((entry, index) => ({ entry, index }));
     }
 
-    const group = candidate[layer.groupBy];
+    const group = String(candidate[layer.groupBy]).toLowerCase();
     return entries
         .map((entry, index) => ({ entry, index }))
-        .filter(({ entry }) => entry[layer.groupBy] === group);
+        .filter(({ entry }) => String(entry[layer.groupBy]).toLowerCase() === group);
 }
 
 async function findKnowledgeDuplicate(layer, candidate) {
@@ -128,9 +129,44 @@ async function mergeKnowledgeEntries(layer, profileId, existing, candidate) {
     }
 }
 
+function knowledgeOwnerPool() {
+    const context = getContext();
+    const owners = KNOWLEDGE_KEYS.flatMap((key) => {
+        const layer = KNOWLEDGE_LAYERS[key];
+        return readKnowledgeEntries(layer).map((entry) => entry[layer.groupBy]);
+    });
+    return [context.name2, context.name1, ...owners].filter(Boolean);
+}
+
+// Runs over all three layers, since they share one sheet grouped by name: a
+// "Mona Miller" learned in facts has to pull "mona" in dispositions along too.
+function canonicalizeKnowledgeOwners(pool) {
+    for (const key of KNOWLEDGE_KEYS) {
+        const layer = KNOWLEDGE_LAYERS[key];
+        const entries = readKnowledgeEntries(layer);
+        let changed = false;
+        const renamed = entries.map((entry) => {
+            const owner = entry[layer.groupBy];
+            const resolved = resolveKnowledgeOwner(owner, pool);
+            if (resolved === owner) {
+                return entry;
+            }
+            changed = true;
+            return { ...entry, [layer.groupBy]: resolved };
+        });
+        if (changed) {
+            writeKnowledgeEntries(layer, renamed);
+        }
+    }
+}
+
 // Every candidate is handled on its own and against the list as it stands, so
 // two near-identical entries from the same call meet each other too.
-async function absorbKnowledgeEntry(layer, profileId, candidate) {
+async function absorbKnowledgeEntry(layer, profileId, found) {
+    const pool = [...knowledgeOwnerPool(), found[layer.groupBy]];
+    const candidate = { ...found, [layer.groupBy]: resolveKnowledgeOwner(found[layer.groupBy], pool) };
+    canonicalizeKnowledgeOwners(pool);
+
     const duplicate = await findKnowledgeDuplicate(layer, candidate);
     if (!duplicate) {
         writeKnowledgeEntries(layer, [...readKnowledgeEntries(layer), candidate]);
@@ -148,7 +184,7 @@ async function absorbKnowledgeEntry(layer, profileId, candidate) {
     }
 
     const entries = [...readKnowledgeEntries(layer)];
-    entries[duplicate.index] = merged;
+    entries[duplicate.index] = { ...merged, [layer.groupBy]: duplicate.entry[layer.groupBy] };
     writeKnowledgeEntries(layer, entries);
     return "merged";
 }
