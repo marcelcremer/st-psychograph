@@ -1,15 +1,19 @@
 ---
 name: pr-overview
 description: Summarize the current branch's changes as a file walkthrough table and a Mermaid diagram of imports between changed files. Use when the user asks for a PR overview, change summary, file walkthrough, or diagram of what a branch changes, optionally posted as a pull request comment on GitHub or Gitea.
-argument-hint: "[base-ref] [--comment]"
+argument-hint: "[--comment] [base-ref]"
 ---
 
 Produce a reviewer-oriented overview of the changes on the current branch.
 
 ## 1. Collect the changes
 
-- Base: use the base ref from the arguments if given. Otherwise use the remote default
-  branch (`git symbolic-ref --short refs/remotes/origin/HEAD`), falling back to `main`, then `master`.
+- Base: the base branch of the branch's open pull request (see *Find the pull request* in
+  section 5; the lookup is the same with or without `--comment`). Only if there is no open pull
+  request, or no MCP server for the platform is available, fall back to the remote default
+  branch (`git symbolic-ref --short refs/remotes/origin/HEAD`), then `main`, then `master`, and
+  say which base was used. A base ref given as argument overrides both.
+- Compare against the remote-tracking base (`origin/<base>`), fetching it first if it is missing.
 - Compare committed branch changes only: `git diff -M --numstat <base>...HEAD` for line counts
   and `git diff -M --name-status <base>...HEAD` for status and rename sources.
 - If the working tree has uncommitted changes, say that they are not included.
@@ -90,7 +94,8 @@ Without `--comment`, stop here.
 ## 5. Post to the pull request (only with `--comment`)
 
 Post the overview as a single pull request comment on GitHub or Gitea, updating an earlier one
-instead of adding another. Ask the user whenever a step below is ambiguous; never guess a target.
+instead of adding another. Use the platform's MCP tools only; never fall back to a CLI or raw
+REST calls. Ask the user whenever a step below is ambiguous; never guess a target.
 
 ### Find the platform and repository
 
@@ -98,23 +103,18 @@ instead of adding another. Ask the user whenever a step below is ambiguous; neve
   If several remotes point to different repositories and the pull request could live in either
   (for example a fork and its upstream), ask which one to use.
 - Parse host, owner, and repository from the remote URL (SSH or HTTPS, with or without port).
-- Platform:
-  - `github.com`, or a host for which `gh auth status --hostname <host>` succeeds: GitHub, via `gh`.
-  - A host where `https://<host>/api/v1/version` returns JSON with a `version` field: Gitea
-    (Forgejo works the same way), via its REST API at `https://<host>/api/v1`.
-  - Anything else: ask.
-- Gitea authentication: send `Authorization: token $GITEA_TOKEN`. If the variable is not set,
-  ask the user how to authenticate. Never print or echo a token.
+- Platform: `github.com` uses the GitHub MCP server (`mcp__github__*`); any other host uses the
+  MCP server configured for that host (for example a Gitea/Forgejo MCP server). If the tools are
+  deferred, load them first. If no MCP server for the host is available, say so and stop.
 
 ### Find the pull request
 
-- GitHub: `gh pr view --json number,url,baseRefName,headRefOid`.
-- Gitea: `GET /repos/{owner}/{repo}/pulls?state=open` and select pull requests whose `head.ref`
-  is the current branch.
+- GitHub: `list_pull_requests` with `state: "open"` and `head: "<owner>:<branch>"`.
+  Gitea: the server's equivalent pull request listing, filtered to `head.ref` = current branch.
 - No open pull request, or more than one: ask.
-- If the pull request's base branch differs from the base used above, redo the overview against
-  the pull request's base.
-- If the pull request's head commit differs from local `HEAD` (unpushed or outdated commits),
+- Read the pull request (GitHub `pull_request_read` with `method: "get"`) for its number, URL,
+  base branch, and head SHA.
+- If the pull request's head SHA differs from local `HEAD` (unpushed or outdated commits),
   tell the user and ask whether to post anyway.
 
 ### Create or update the comment
@@ -123,16 +123,13 @@ instead of adding another. Ask the user whenever a step below is ambiguous; neve
   with each section wrapped in `<details><summary>File walkthrough</summary> … </details>` and
   `<details><summary>Diagram walkthrough</summary> … </details>`. Keep the blank lines around
   the table and the Mermaid block inside `<details>` so both still render.
-- Determine the authenticated user: GitHub `gh api user --jq .login`, Gitea `GET /user` (`login`).
-- List the pull request's issue comments (GitHub
-  `gh api --paginate repos/{owner}/{repo}/issues/{number}/comments`, Gitea
-  `GET /repos/{owner}/{repo}/issues/{number}/comments`). The existing overview is the comment
-  whose body starts with `<!-- PR Overview -->` and whose author is the authenticated user.
-  Ignore marked comments by anyone else.
-- If it exists, replace its body: GitHub `gh api -X PATCH repos/{owner}/{repo}/issues/comments/{id}`,
-  Gitea `PATCH /repos/{owner}/{repo}/issues/comments/{id}`. If several exist, update the newest.
-- Otherwise create one: GitHub `gh api -X POST repos/{owner}/{repo}/issues/{number}/comments`,
-  Gitea `POST /repos/{owner}/{repo}/issues/{number}/comments`.
-- Send the body as JSON built from a file (for example `jq -Rs '{body: .}' overview.md`), never
-  by interpolating Markdown into a shell string.
+- Determine the authenticated user: GitHub `get_me` (`login`), Gitea the server's equivalent.
+- List the pull request's conversation comments (GitHub `issue_read` with
+  `method: "get_comments"` and the pull request number, paginating until all are read). The
+  existing overview is the comment whose body starts with `<!-- PR Overview -->` and whose author
+  is the authenticated user. Ignore marked comments by anyone else.
+- If it exists, replace its body (GitHub `update_issue_comment`). If several exist, update the
+  newest.
+- Otherwise create one (GitHub `add_issue_comment` with the pull request number as
+  `issue_number`).
 - Report whether the comment was created or updated, with its URL.
