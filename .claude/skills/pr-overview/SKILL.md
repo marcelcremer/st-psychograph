@@ -1,7 +1,7 @@
 ---
 name: pr-overview
-description: Summarize the current branch's changes as a file walkthrough table and a Mermaid diagram of imports between changed files. Use when the user asks for a PR overview, change summary, file walkthrough, or diagram of what a branch changes, optionally posted as a pull request comment on GitHub or Gitea.
-argument-hint: "[--comment] [base-ref]"
+description: Summarize the current branch's changes as a file walkthrough table and a Mermaid diagram of imports between changed files, and post it as a pull request comment on GitHub or Gitea. Use when the user asks for a PR overview, change summary, file walkthrough, or diagram of what a branch changes.
+argument-hint: "[base-ref]"
 ---
 
 Produce a reviewer-oriented overview of the changes on the current branch.
@@ -9,7 +9,7 @@ Produce a reviewer-oriented overview of the changes on the current branch.
 ## 1. Collect the changes
 
 - Base: the base branch of the branch's open pull request (see *Find the pull request* in
-  section 5; the lookup is the same with or without `--comment`). Only if there is no open pull
+  section 5). Only if there is no open pull
   request, or no MCP server for the platform is available, fall back to the remote default
   branch (`git symbolic-ref --short refs/remotes/origin/HEAD`), then `main`, then `master`, and
   say which base was used. A base ref given as argument overrides both.
@@ -87,11 +87,12 @@ Draw a Mermaid `flowchart LR` of dependencies between changed files.
 
 ## 4. Output
 
-Print Markdown with the headings `### File walkthrough` and `### Diagram walkthrough`, the table,
-and the diagram in a ```` ```mermaid ```` block, so the result can be pasted into a pull request.
-Without `--comment`, stop here.
+Build Markdown with the headings `### File walkthrough` and `### Diagram walkthrough`, the table,
+and the diagram in a ```` ```mermaid ```` block. If the branch has an open pull request, post it
+there (section 5) instead of printing it. Only without an open pull request, or without an MCP
+server for the platform, print it in the chat and say why it was not posted.
 
-## 5. Post to the pull request (only with `--comment`)
+## 5. Post to the pull request
 
 Post the overview as a single pull request comment on GitHub or Gitea, updating an earlier one
 instead of adding another. Use the platform's MCP tools only; never fall back to a CLI or raw
@@ -111,7 +112,7 @@ REST calls. Ask the user whenever a step below is ambiguous; never guess a targe
 
 - GitHub: `list_pull_requests` with `state: "open"` and `head: "<owner>:<branch>"`.
   Gitea: the server's equivalent pull request listing, filtered to `head.ref` = current branch.
-- No open pull request, or more than one: ask.
+- No open pull request: print the overview instead (section 4). More than one: ask.
 - Read the pull request (GitHub `pull_request_read` with `method: "get"`) for its number, URL,
   base branch, and head SHA.
 - If the pull request's head SHA differs from local `HEAD` (unpushed or outdated commits),
